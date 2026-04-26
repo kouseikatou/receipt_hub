@@ -18,9 +18,12 @@ PDF・画像・HEIC いずれも `mcp__gemini__analyze_media` に直接投げる
 
 ## Step 1: 履歴参照（高速パス）
 
-解析前に `~/.receipt-hub/vendor_history.json` を読み込む。
-ベンダー名が履歴に存在し `count >= 3` の場合、勘定科目はそのまま採用（確信度: high）。
-履歴にないベンダーは Step 2 へ進む。
+```bash
+python3 scripts/history.py lookup "ベンダー名"
+```
+
+返り値の `confidence=high`（count >= 3）なら勘定科目をそのまま採用し Step 2〜3 をスキップ。
+`found=false` または `confidence=medium` なら Step 2 へ進む。
 
 ## Step 2: Gemini Vision で解析
 
@@ -63,29 +66,17 @@ PDF・画像・HEIC いずれも `mcp__gemini__analyze_media` に直接投げる
 
 ## Step 5: 履歴への書き戻し
 
-ユーザーが確認・承認したアイテム（high/medium どちらも）を履歴に記録する：
+ユーザーが確認・承認したアイテム（high/medium どちらも）を記録する：
 
 ```bash
-python3 - <<'EOF'
-import json
-from pathlib import Path
+python3 scripts/history.py add "ベンダー名" "勘定科目" "YYYY-MM-DD"
+```
 
-history_path = Path.home() / ".receipt-hub" / "vendor_history.json"
-history_path.parent.mkdir(exist_ok=True)
-history = json.loads(history_path.read_text()) if history_path.exists() else {}
+全件処理後に履歴の状態を確認：
 
-vendor = "スターバックス渋谷店"   # 実際のベンダー名に置き換え
-category = "会議費"               # 確定した勘定科目に置き換え
-
-entry = history.get(vendor, {"category": category, "count": 0, "last_confirmed": ""})
-entry["count"] += 1
-entry["category"] = category
-entry["last_confirmed"] = "2026-04-27"   # 処理日に置き換え
-history[vendor] = entry
-
-history_path.write_text(json.dumps(history, ensure_ascii=False, indent=2))
-print(f"履歴更新: {vendor} → {category} (累計 {entry['count']} 件)")
-EOF
+```bash
+python3 scripts/history.py list
+python3 scripts/history.py stats
 ```
 
 ## 出力形式

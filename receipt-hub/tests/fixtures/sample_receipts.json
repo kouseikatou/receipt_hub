@@ -1,0 +1,50 @@
+[
+  {
+    "description": "カフェ打ち合わせ（会議費）",
+    "raw_text": "スターバックス コーヒー 渋谷店\n2024年1月15日\n合計 ¥1,650（税込10%）",
+    "expected": {
+      "date": "2024-01-15",
+      "vendor": "スターバックス コーヒー 渋谷店",
+      "amount": 1650,
+      "tax_rate": 10,
+      "doc_type": "領収書",
+      "category": "会議費"
+    }
+  },
+  {
+    "description": "タクシー（旅費交通費）",
+    "raw_text": "領収書\n日付: R6.01.20\n金額: 2,340円\nGO タクシー",
+    "expected": {
+      "date": "2024-01-20",
+      "vendor": "GO タクシー",
+      "amount": 2340,
+      "tax_rate": 10,
+      "doc_type": "領収書",
+      "category": "旅費交通費"
+    }
+  },
+  {
+    "description": "SaaS請求書（支払手数料）",
+    "raw_text": "Invoice\nDate: 2024/01/31\nAWS Amazon Web Services\nTotal: ¥12,650\n消費税10%含む",
+    "expected": {
+      "date": "2024-01-31",
+      "vendor": "Amazon Web Services",
+      "amount": 12650,
+      "tax_rate": 10,
+      "doc_type": "請求書",
+      "category": "通信費"
+    }
+  },
+  {
+    "description": "書籍（新聞図書費）",
+    "raw_text": "Amazon.co.jp\n注文日: 2024年1月10日\nPythonエンジニアファーストブック\n¥2,860（税込）",
+    "expected": {
+      "date": "2024-01-10",
+      "vendor": "Amazon.co.jp",
+      "amount": 2860,
+      "tax_rate": 10,
+      "doc_type": "領収書",
+      "category": "新聞図書費"
+    }
+  }
+]

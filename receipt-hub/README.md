@@ -256,10 +256,10 @@ Claude: 対象期間: 2024年1月（2024/01/01〜01/31）で進めます。
 | スキル | スラッシュコマンド | トリガーワード | 説明 |
 |--------|-----------------|-------------|------|
 | receipt | `/receipt` | 「領収書を処理して」「経費をまとめて」 | 収集→解析→CSV出力を一括実行 |
-| collect | `/collect` | 「領収書を集めて」「メールを探して」 | 3チャネルから収集のみ |
-| analyze | `/analyze` | 「解析して」「勘定科目を判定して」 | 1件の書類を解析のみ |
-| csv | `/csv` | 「CSVに出力して」「エクスポートして」 | CSV出力のみ |
-| accounts | `/accounts` | 「勘定科目は？」「会議費と交際費の違いは？」 | 日本の経費ルールを参照（自動）|
+| receipt-collect | `/receipt-collect` | 「領収書を集めて」「メールを探して」 | 3チャネルから収集のみ |
+| receipt-analyze | `/receipt-analyze` | 「解析して」「勘定科目を判定して」 | 1件の書類を解析のみ |
+| receipt-csv | `/receipt-csv` | 「CSVに出力して」「エクスポートして」 | CSV出力のみ |
+| receipt-accounts | `/receipt-accounts` | 「勘定科目は？」「会議費と交際費の違いは？」 | 日本の経費ルールを参照（自動）|
 
 ---
 
@@ -295,7 +295,7 @@ claude plugin update receipt-hub
 ### 勘定科目の判定がズレる
 
 - 「この経費の勘定科目を教えて」と聞くと詳しく解説します
-- `skills/accounting-knowledge/references/japanese-categories.md` にルールを追記してカスタマイズできます
+- `skills/receipt-accounts/references/japanese-categories.md` にルールを追記してカスタマイズできます
 
 ### CSVが文字化けする
 

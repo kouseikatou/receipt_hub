@@ -1,5 +1,5 @@
 ---
-name: collect
+name: receipt-collect
 description: |
   Gmail・Chatwork・ローカルフォルダから領収書・請求書を収集するスキル。「領収書を集めて」「メールの領収書を探して」「Chatworkの請求書を取得して」「フォルダをスキャンして」と言われたときに使う。
 tools:

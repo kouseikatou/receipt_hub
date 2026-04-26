@@ -10,7 +10,6 @@ tools:
   - mcp__chatwork__list_rooms
   - mcp__chatwork__list_room_messages
   - mcp__chatwork__get_room_message
-  - mcp__gdrive__search
 ---
 
 # 領収書パイプライン 一括実行

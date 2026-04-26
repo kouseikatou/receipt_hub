@@ -12,7 +12,6 @@ tools:
   - mcp__chatwork__list_room_messages
   - mcp__chatwork__list_room_files
   - mcp__chatwork__get_room_file
-  - mcp__gdrive__search
 ---
 
 # 領収書・請求書の収集

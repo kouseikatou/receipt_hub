@@ -1,0 +1,9 @@
+{
+  "name": "receipt-hub",
+  "version": "0.1.0",
+  "description": "Gmail・Chatwork・ローカルフォルダから領収書・請求書を自動収集し、AI解析でGoogleスプレッドシートに記録する経理自動化プラグイン",
+  "author": {
+    "name": "katoukousei"
+  },
+  "keywords": ["receipt", "invoice", "accounting", "expense", "freee", "japan"]
+}

@@ -44,10 +44,12 @@ YYYY-MM-DD に統一：
 
 ## 重複チェック
 
+`scripts/dedup.py` が処理する。CSV 出力前に実行すること。
+
 同一アイテムとみなす条件（2つ以上一致）：
 1. 金額が同じ
 2. 日付が同じ（±1日）
-3. vendor が類似（前方一致、または一方が他方を含む）
+3. vendor が類似（一方が他方を含む、または SequenceMatcher 類似度 0.7 以上）
 
 ## vendor_history.json の構造
 

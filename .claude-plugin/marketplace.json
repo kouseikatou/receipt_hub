@@ -1,0 +1,24 @@
+{
+  "name": "receipt-hub",
+  "owner": {
+    "name": "kouseikatou"
+  },
+  "metadata": {
+    "description": "Gmail・Chatwork・ローカルフォルダから領収書・請求書を自動収集し、Googleスプレッドシートに記録する経理自動化プラグイン"
+  },
+  "plugins": [
+    {
+      "name": "receipt-hub",
+      "source": "./marketplace/plugins/receipt-hub",
+      "description": "領収書・請求書の収集〜AI解析〜スプレッドシート記録を一気通貫で自動化",
+      "version": "0.1.0",
+      "author": {
+        "name": "kouseikatou"
+      },
+      "repository": "https://github.com/kouseikatou/receipt_hub",
+      "license": "MIT",
+      "category": "productivity",
+      "tags": ["receipt", "invoice", "accounting", "expense", "japan", "freee"]
+    }
+  ]
+}

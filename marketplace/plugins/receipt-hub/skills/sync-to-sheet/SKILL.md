@@ -72,8 +72,8 @@ sheet.append_row(row, value_input_option="USER_ENTERED")
 書き込み前に既存データの日付・金額・店名を照合し、重複がある場合はスキップしてユーザーに報告する。
 
 ## config.json の管理
-スプレッドシートURLとローカルフォルダパスは `~/.receipt-hub/config.json` に保存する。
-初回実行時にユーザーに聞いて作成し、以降は自動読み込みする。
+スプレッドシートURLとローカルフォルダパスは `~/.receipt-hub/config.json` に保存されている。
+`python3 setup.py` で自動生成されるため、通常は手動編集不要。
 
 ```json
 {
@@ -81,3 +81,5 @@ sheet.append_row(row, value_input_option="USER_ENTERED")
   "local_folder": "~/Documents/領収書/未処理"
 }
 ```
+
+config.json が存在しない場合は `python3 setup.py` を実行するようユーザーに案内する。

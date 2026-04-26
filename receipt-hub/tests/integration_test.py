@@ -5,10 +5,11 @@ Receipt Hub 総合テスト
 使い方:
     python3 tests/integration_test.py
 
-全工程（環境チェック → 解析 → Sheets書き込み → 後片付け）を通しで確認します。
-テスト用に書き込んだデータは自動的に削除されます。
+全工程（環境チェック → 解析 → CSV出力 → 後片付け）を通しで確認します。
+テスト用に生成したCSVファイルは自動的に削除されます。
 """
 
+import csv
 import json
 import os
 import re
@@ -16,19 +17,15 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# ─────────────────────────────────────────────
-# 表示ユーティリティ
-# ─────────────────────────────────────────────
-
 GREEN  = "\033[92m"
 RED    = "\033[91m"
 YELLOW = "\033[93m"
 RESET  = "\033[0m"
 BOLD   = "\033[1m"
 
-def ok(msg):    print(f"  {GREEN}✓{RESET} {msg}")
-def fail(msg):  print(f"  {RED}✗{RESET} {msg}"); return False
-def warn(msg):  print(f"  {YELLOW}⚠{RESET} {msg}")
+def ok(msg):   print(f"  {GREEN}✓{RESET} {msg}")
+def fail(msg): print(f"  {RED}✗{RESET} {msg}"); return False
+def warn(msg): print(f"  {YELLOW}⚠{RESET} {msg}")
 def section(n, title): print(f"\n{BOLD}[{n}] {title}{RESET}")
 
 
@@ -40,48 +37,30 @@ def check_environment():
     section("1/4", "環境チェック")
     passed = True
 
-    # gspread インポート確認
-    try:
-        import gspread
-        ok(f"gspread インストール済み (v{gspread.__version__})")
-    except ImportError:
-        fail("gspread が見つかりません。`pip3 install gspread` を実行してください。")
-        passed = False
-
-    # OAuth トークン確認
-    token_path = Path.home() / ".config" / "gspread" / "authorized_user.json"
-    cred_path  = Path.home() / ".config" / "gspread" / "credentials.json"
-    if token_path.exists():
-        ok("OAuth トークン確認済み")
-    elif cred_path.exists():
-        warn("credentials.json はありますが初回認証が未完了です。")
-        warn("`python3 -c \"import gspread; gspread.oauth()\"` を実行してブラウザで許可してください。")
-        passed = False
+    # exports/ ディレクトリ確認
+    exports_dir = Path("exports")
+    if not exports_dir.exists():
+        exports_dir.mkdir(exist_ok=True)
+        ok("exports/ ディレクトリを作成しました")
     else:
-        fail("OAuth 認証情報が見つかりません。README の Step 3 を参照してください。")
-        passed = False
+        ok("exports/ ディレクトリ確認済み")
 
-    # config.json 確認
-    config_path = Path.home() / ".receipt-hub" / "config.json"
-    if not config_path.exists():
-        fail(f"config.json が見つかりません: {config_path}")
-        fail("README の Step 6 を参照して作成してください。")
-        passed = False
+    # ローカルフォルダ確認
+    local_dir = Path.home() / "Documents" / "領収書" / "未処理"
+    if local_dir.exists():
+        ok(f"ローカルフォルダ確認済み: ~/Documents/領収書/未処理/")
     else:
-        try:
-            with open(config_path) as f:
-                config = json.load(f)
-            url = config.get("spreadsheet_url", "")
-            if "docs.google.com/spreadsheets" not in url:
-                fail("config.json の spreadsheet_url が正しくありません。")
-                passed = False
-            else:
-                ok("config.json 確認済み")
-        except json.JSONDecodeError:
-            fail("config.json のJSON形式が不正です。")
-            passed = False
+        warn("ローカルフォルダが見つかりません。`python3 setup.py` を実行してください。")
 
-    return passed, config if passed else None
+    # Python バージョン確認
+    major, minor = sys.version_info[:2]
+    if major >= 3 and minor >= 8:
+        ok(f"Python {major}.{minor} ✓")
+    else:
+        fail(f"Python 3.8以上が必要です (現在: {major}.{minor})")
+        passed = False
+
+    return passed
 
 
 # ─────────────────────────────────────────────
@@ -90,26 +69,31 @@ def check_environment():
 
 CATEGORY_RULES = {
     "会議費":     ["スターバックス", "カフェ", "打ち合わせ", "コーヒー", "ドトール", "タリーズ"],
-    "旅費交通費": ["タクシー", "電車", "バス", "新幹線", "飛行機", "suica", "ic", "go"],
-    "通信費":     ["aws", "amazon web services", "google cloud", "さくら", "さくらインターネット",
+    "旅費交通費": ["タクシー", "電車", "バス", "新幹線", "飛行機", "suica", "pasmo", "go タクシー"],
+    "通信費":     ["aws", "amazon web services", "google cloud", "さくらインターネット",
                    "cloudflare", "netlify", "vercel", "heroku", "github"],
-    "新聞図書費": ["amazon.co.jp", "kindle", "書籍", "本", "udemy", "book"],
-    "消耗品費":   ["ヨドバシ", "ビックカメラ", "amazon", "文具", "事務用品"],
-    "広告宣伝費": ["meta", "google ads", "facebook", "twitter", "名刺"],
+    "新聞図書費": ["amazon.co.jp", "kindle", "書籍", "udemy", "book"],
+    "消耗品費":   ["ヨドバシ", "ビックカメラ", "文具", "事務用品"],
+    "広告宣伝費": ["google ads", "facebook広告", "名刺"],
     "外注費":     ["業務委託", "外注", "制作費", "フリーランス"],
     "地代家賃":   ["家賃", "コワーキング", "レンタルオフィス", "ウィーワーク"],
-    "研修費":     ["セミナー", "勉強会", "udemy", "connpass", "研修"],
+    "研修費":     ["セミナー", "勉強会", "connpass", "研修"],
 }
 
-AMOUNT_PATTERN  = re.compile(r"[¥\\]?\s*([\d,]+)\s*円?")
-DATE_PATTERNS   = [
+AMOUNT_PATTERN = re.compile(r"[¥\\]\s*([\d,]+)|(\d[\d,]*)\s*円")
+DATE_PATTERNS  = [
     (re.compile(r"(\d{4})[/\-年](\d{1,2})[/\-月](\d{1,2})"), "%Y-%m-%d"),
     (re.compile(r"R(\d+)[./年](\d{1,2})[./月](\d{1,2})"),     "reiwa"),
 ]
 
 def parse_amount(text):
-    matches = AMOUNT_PATTERN.findall(text.replace(",", ""))
-    amounts = [int(m.replace(",", "")) for m in matches if m]
+    matches = AMOUNT_PATTERN.findall(text)
+    amounts = []
+    for yen_prefix, yen_suffix in matches:
+        raw = (yen_prefix or yen_suffix).replace(",", "")
+        if raw.isdigit():
+            amounts.append(int(raw))
+    amounts = [a for a in amounts if not (1900 <= a <= 2100)]
     return max(amounts) if amounts else None
 
 def parse_date(text):
@@ -166,91 +150,96 @@ def check_parsing():
 
 
 # ─────────────────────────────────────────────
-# Step 3: Googleスプレッドシート 書き込みテスト
+# Step 3: CSV出力テスト
 # ─────────────────────────────────────────────
 
-TEST_MARKER = "[RECEIPT_HUB_TEST]"
+TEST_CSV_NAME = None
 
-def check_sheets(config):
-    section("3/4", "Googleスプレッドシート 書き込みテスト")
+def check_csv_export():
+    section("3/4", "CSV出力テスト")
+    global TEST_CSV_NAME
 
-    try:
-        import gspread
-    except ImportError:
-        fail("gspread が使えません。")
-        return False, None
-
-    try:
-        gc    = gspread.oauth()
-        sheet = gc.open_by_url(config["spreadsheet_url"]).sheet1
-        ok(f"スプレッドシートに接続: {sheet.title}")
-    except Exception as e:
-        fail(f"スプレッドシートへの接続に失敗: {e}")
-        return False, None
-
-    # テスト行を書き込む
-    test_row = [
-        "2024-01-01",
-        TEST_MARKER,
-        "9999",
-        "9090",
-        "10%",
-        "雑費",
-        "領収書",
-        "統合テスト用データ（自動削除）",
-        "test",
-        "テスト中",
-        datetime.now().strftime("%Y-%m-%d %H:%M"),
+    test_items = [
+        {
+            "date": "2024-01-15", "vendor": "スターバックス渋谷店",
+            "amount": 1650, "amount_excl_tax": 1500, "tax_rate": 10,
+            "category": "会議費", "doc_type": "領収書",
+            "memo": "打ち合わせ代", "source": "Gmail",
+        },
+        {
+            "date": "2024-01-20", "vendor": "GO タクシー, 東京",
+            "amount": 2340, "amount_excl_tax": 2127, "tax_rate": 10,
+            "category": "旅費交通費", "doc_type": "領収書",
+            "memo": "客先訪問", "source": "ローカル",
+        },
     ]
-    try:
-        sheet.append_row(test_row, value_input_option="USER_ENTERED")
-        ok("テスト行の書き込み成功")
-    except Exception as e:
-        fail(f"書き込みに失敗: {e}")
-        return False, sheet
 
-    # 書き込んだ行を確認
-    try:
-        all_values = sheet.get_all_values()
-        written = any(TEST_MARKER in row for row in all_values)
-        if written:
-            ok("書き込んだデータの読み取り確認済み")
-        else:
-            fail("書き込んだデータが見つかりません。")
-            return False, sheet
-    except Exception as e:
-        fail(f"読み取りに失敗: {e}")
-        return False, sheet
+    exports_dir = Path("exports")
+    exports_dir.mkdir(exist_ok=True)
+    date_str = datetime.now().strftime("%Y%m%d")
+    filename = exports_dir / f"{date_str}_テスト.csv"
+    TEST_CSV_NAME = filename
 
-    return True, sheet
-
-
-# ─────────────────────────────────────────────
-# Step 4: 後片付け（テストデータ削除）
-# ─────────────────────────────────────────────
-
-def cleanup(sheet):
-    section("4/4", "後片付け（テストデータ削除）")
-
-    if sheet is None:
-        warn("シートに接続されていないためスキップします。")
-        return True
+    headers = ["日付", "店名・先方", "金額(税込)", "税抜金額", "消費税率",
+               "勘定科目", "種別", "メモ", "ソース"]
 
     try:
-        all_values = sheet.get_all_values()
-        rows_to_delete = [
-            i + 1
-            for i, row in enumerate(all_values)
-            if TEST_MARKER in row
-        ]
-        for row_num in reversed(rows_to_delete):
-            sheet.delete_rows(row_num)
-        ok(f"テスト行を削除しました（{len(rows_to_delete)}行）")
-        return True
+        with open(filename, "w", newline="", encoding="utf-8-sig") as f:
+            writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+            writer.writerow(headers)
+            for item in test_items:
+                writer.writerow([
+                    item["date"], item["vendor"],
+                    item["amount"], item["amount_excl_tax"],
+                    f"{item['tax_rate']}%",
+                    item["category"], item["doc_type"],
+                    item["memo"], item["source"],
+                ])
+        ok(f"CSVファイルを生成しました: {filename}")
     except Exception as e:
-        warn(f"テスト行の削除に失敗しました（手動で削除してください）: {e}")
-        warn(f"  条件: B列が '{TEST_MARKER}' の行")
+        fail(f"CSV生成に失敗: {e}")
         return False
+
+    # 検証: 読み取って内容確認
+    try:
+        with open(filename, encoding="utf-8-sig") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+
+        assert rows[0] == headers, "ヘッダーが正しくありません"
+        assert len(rows) == 3, f"行数が不正: {len(rows)}"
+        assert rows[1][1] == "スターバックス渋谷店", "店名が正しくありません"
+        # カンマ含む店名が正しくエスケープされているか
+        assert rows[2][1] == "GO タクシー, 東京", "カンマ含む値のエスケープが正しくありません"
+        ok(f"ヘッダー・データ行・カンマエスケープの検証 OK ({len(rows)-1}件)")
+    except Exception as e:
+        fail(f"CSV検証に失敗: {e}")
+        return False
+
+    # BOM確認
+    with open(filename, "rb") as f:
+        bom = f.read(3)
+    if bom == b"\xef\xbb\xbf":
+        ok("UTF-8 BOM付き確認済み（Excelで文字化けなし）")
+    else:
+        fail("BOMが付いていません")
+        return False
+
+    return True
+
+
+# ─────────────────────────────────────────────
+# Step 4: 後片付け
+# ─────────────────────────────────────────────
+
+def cleanup():
+    section("4/4", "後片付け（テストCSV削除）")
+    if TEST_CSV_NAME and Path(TEST_CSV_NAME).exists():
+        Path(TEST_CSV_NAME).unlink()
+        ok(f"テストCSVを削除しました: {TEST_CSV_NAME}")
+    else:
+        warn("削除対象のファイルが見つかりませんでした。")
+    return True
 
 
 # ─────────────────────────────────────────────
@@ -263,28 +252,22 @@ def main():
     print(f"{'═' * 50}{RESET}")
 
     results = []
-    sheet   = None
 
-    # Step 1
-    env_ok, config = check_environment()
+    env_ok = check_environment()
     results.append(("環境チェック", env_ok))
     if not env_ok:
         print(f"\n{RED}環境が整っていません。上記のエラーを解消してから再実行してください。{RESET}")
         sys.exit(1)
 
-    # Step 2
     parse_ok = check_parsing()
     results.append(("解析テスト", parse_ok))
 
-    # Step 3
-    sheets_ok, sheet = check_sheets(config)
-    results.append(("Sheets書き込み", sheets_ok))
+    csv_ok = check_csv_export()
+    results.append(("CSV出力", csv_ok))
 
-    # Step 4
-    cleanup_ok = cleanup(sheet)
+    cleanup_ok = cleanup()
     results.append(("後片付け", cleanup_ok))
 
-    # サマリー
     print(f"\n{BOLD}{'─' * 50}")
     print("  テスト結果")
     print(f"{'─' * 50}{RESET}")

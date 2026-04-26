@@ -53,26 +53,20 @@ Chatwork: ○件（created_at が 2026/03/01〜03/31 のファイルを確認）
 ```
 
 ### ローカルフォルダ
-対象期間内に **更新されたファイル** を日付で絞り込む。
 
-スキャン対象フォルダ（ユーザー指定 + デフォルト）を Bash で検索：
+`scripts/scan_local.py` を実行する：
+
 ```bash
-# 例: 2026年3月1日〜31日に更新されたPDF・画像
-find ~/Downloads ~/Desktop -type f \
-  \( -iname "*.pdf" -o -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.heic" \) \
-  -newermt "2026-02-28" ! -newermt "2026-04-01" \
-  -not -path "*/.receipt_hub_processed/*"
+python3 scripts/scan_local.py --start 2026-03-01 --end 2026-03-31
+# 追加フォルダを指定する場合
+python3 scripts/scan_local.py --start 2026-03-01 --end 2026-03-31 --dirs ~/Downloads ~/Desktop ~/Documents/領収書/未処理
 ```
 
-`-newermt` で期間を指定し、ファイル名・フォルダ名に「領収書」が含まれなくてもヒットさせる。
+- `~/Downloads` / `~/Desktop` → mdfind でダウンロード日基準検索
+- それ以外のフォルダ → find で更新日基準検索
+- 両方の結果をマージして重複パスを除外
 
-**報告形式**：
-```
-ローカル: ○件（~/Downloads, ~/Desktop を 2026/03/01〜03/31 の更新日で検索）
-  - ~/Downloads/invoice_202603.pdf（更新: 2026-03-15）
-  - ~/Desktop/receipt.jpg（更新: 2026-03-22）
-```
-ファイルが0件のときも「どのフォルダをどの期間で検索したか」を報告する。
+スクリプトが stderr にサマリーを出力するのでそのままユーザーに報告する。
 
 ## 収集後の出力形式
 

@@ -11,7 +11,6 @@ Receipt Hub 総合テスト
 
 import csv
 import json
-import os
 import re
 import sys
 from datetime import datetime
@@ -28,6 +27,7 @@ def fail(msg): print(f"  {RED}✗{RESET} {msg}"); return False
 def warn(msg): print(f"  {YELLOW}⚠{RESET} {msg}")
 def section(n, title): print(f"\n{BOLD}[{n}] {title}{RESET}")
 
+EXPORTS_DIR = Path("exports")
 
 # ─────────────────────────────────────────────
 # Step 1: 環境チェック
@@ -37,25 +37,18 @@ def check_environment():
     section("1/4", "環境チェック")
     passed = True
 
-    # exports/ ディレクトリ確認
-    exports_dir = Path("exports")
-    if not exports_dir.exists():
-        exports_dir.mkdir(exist_ok=True)
-        ok("exports/ ディレクトリを作成しました")
-    else:
-        ok("exports/ ディレクトリ確認済み")
+    EXPORTS_DIR.mkdir(exist_ok=True)
+    ok(f"exports/ ディレクトリ確認済み")
 
-    # ローカルフォルダ確認
     local_dir = Path.home() / "Documents" / "領収書" / "未処理"
     if local_dir.exists():
-        ok(f"ローカルフォルダ確認済み: ~/Documents/領収書/未処理/")
+        ok("ローカルフォルダ確認済み: ~/Documents/領収書/未処理/")
     else:
         warn("ローカルフォルダが見つかりません。`python3 setup.py` を実行してください。")
 
-    # Python バージョン確認
     major, minor = sys.version_info[:2]
     if major >= 3 and minor >= 8:
-        ok(f"Python {major}.{minor} ✓")
+        ok(f"Python {major}.{minor}")
     else:
         fail(f"Python 3.8以上が必要です (現在: {major}.{minor})")
         passed = False
@@ -82,28 +75,26 @@ CATEGORY_RULES = {
 
 AMOUNT_PATTERN = re.compile(r"[¥\\]\s*([\d,]+)|(\d[\d,]*)\s*円")
 DATE_PATTERNS  = [
-    (re.compile(r"(\d{4})[/\-年](\d{1,2})[/\-月](\d{1,2})"), "%Y-%m-%d"),
+    (re.compile(r"(\d{4})[/\-年](\d{1,2})[/\-月](\d{1,2})"), "ymd"),
     (re.compile(r"R(\d+)[./年](\d{1,2})[./月](\d{1,2})"),     "reiwa"),
 ]
 
 def parse_amount(text):
-    matches = AMOUNT_PATTERN.findall(text)
     amounts = []
-    for yen_prefix, yen_suffix in matches:
+    for yen_prefix, yen_suffix in AMOUNT_PATTERN.findall(text):
         raw = (yen_prefix or yen_suffix).replace(",", "")
         if raw.isdigit():
             amounts.append(int(raw))
-    amounts = [a for a in amounts if not (1900 <= a <= 2100)]
-    return max(amounts) if amounts else None
+    return max((a for a in amounts if not (1900 <= a <= 2100)), default=None)
 
 def parse_date(text):
     for pattern, fmt in DATE_PATTERNS:
         m = pattern.search(text)
-        if m:
-            if fmt == "reiwa":
-                year = 2018 + int(m.group(1))
-                return f"{year}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
-            return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+        if not m:
+            continue
+        if fmt == "reiwa":
+            return f"{2018 + int(m.group(1))}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+        return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
     return None
 
 def parse_category(text):
@@ -122,10 +113,8 @@ def check_parsing():
 
     passed = True
     for sample in samples:
-        desc     = sample["description"]
         raw      = sample["raw_text"]
         expected = sample["expected"]
-
         amount   = parse_amount(raw)
         date     = parse_date(raw)
         category = parse_category(raw)
@@ -139,12 +128,12 @@ def check_parsing():
             errors.append(f"勘定科目: 期待={expected['category']} 実際={category}")
 
         if errors:
-            fail(f"{desc}")
+            fail(sample["description"])
             for e in errors:
                 print(f"      → {e}")
             passed = False
         else:
-            ok(f"{desc} (金額:{amount}円 / 日付:{date} / 科目:{category})")
+            ok(f"{sample['description']} ({amount}円 / {date} / {category})")
 
     return passed
 
@@ -153,35 +142,22 @@ def check_parsing():
 # Step 3: CSV出力テスト
 # ─────────────────────────────────────────────
 
-TEST_CSV_NAME = None
-
 def check_csv_export():
     section("3/4", "CSV出力テスト")
-    global TEST_CSV_NAME
 
     test_items = [
-        {
-            "date": "2024-01-15", "vendor": "スターバックス渋谷店",
-            "amount": 1650, "amount_excl_tax": 1500, "tax_rate": 10,
-            "category": "会議費", "doc_type": "領収書",
-            "memo": "打ち合わせ代", "source": "Gmail",
-        },
-        {
-            "date": "2024-01-20", "vendor": "GO タクシー, 東京",
-            "amount": 2340, "amount_excl_tax": 2127, "tax_rate": 10,
-            "category": "旅費交通費", "doc_type": "領収書",
-            "memo": "客先訪問", "source": "ローカル",
-        },
+        {"date": "2024-01-15", "vendor": "スターバックス渋谷店",
+         "amount": 1650, "amount_excl_tax": 1500, "tax_rate": 10,
+         "category": "会議費", "doc_type": "領収書", "memo": "打ち合わせ代", "source": "Gmail"},
+        {"date": "2024-01-20", "vendor": "GO タクシー, 東京",
+         "amount": 2340, "amount_excl_tax": 2127, "tax_rate": 10,
+         "category": "旅費交通費", "doc_type": "領収書", "memo": "客先訪問", "source": "ローカル"},
     ]
 
-    exports_dir = Path("exports")
-    exports_dir.mkdir(exist_ok=True)
-    date_str = datetime.now().strftime("%Y%m%d")
-    filename = exports_dir / f"{date_str}_テスト.csv"
-    TEST_CSV_NAME = filename
-
-    headers = ["日付", "店名・先方", "金額(税込)", "税抜金額", "消費税率",
-               "勘定科目", "種別", "メモ", "ソース"]
+    EXPORTS_DIR.mkdir(exist_ok=True)
+    filename = EXPORTS_DIR / f"{datetime.now().strftime('%Y%m%d')}_テスト.csv"
+    headers  = ["日付", "店名・先方", "金額(税込)", "税抜金額", "消費税率",
+                "勘定科目", "種別", "メモ", "ソース"]
 
     try:
         with open(filename, "w", newline="", encoding="utf-8-sig") as f:
@@ -189,54 +165,49 @@ def check_csv_export():
             writer.writerow(headers)
             for item in test_items:
                 writer.writerow([
-                    item["date"], item["vendor"],
-                    item["amount"], item["amount_excl_tax"],
-                    f"{item['tax_rate']}%",
-                    item["category"], item["doc_type"],
+                    item["date"], item["vendor"], item["amount"], item["amount_excl_tax"],
+                    f"{item['tax_rate']}%", item["category"], item["doc_type"],
                     item["memo"], item["source"],
                 ])
-        ok(f"CSVファイルを生成しました: {filename}")
+        ok(f"CSVファイルを生成: {filename}")
     except Exception as e:
         fail(f"CSV生成に失敗: {e}")
-        return False
+        return False, None
 
-    # 検証: 読み取って内容確認
+    # 検証: BOM確認 + 内容確認を1回の読み取りで実施
     try:
-        with open(filename, encoding="utf-8-sig") as f:
-            reader = csv.reader(f)
-            rows = list(reader)
+        raw_bytes = filename.read_bytes()
+        if raw_bytes[:3] != b"\xef\xbb\xbf":
+            fail("BOMが付いていません")
+            return False, filename
 
-        assert rows[0] == headers, "ヘッダーが正しくありません"
-        assert len(rows) == 3, f"行数が不正: {len(rows)}"
-        assert rows[1][1] == "スターバックス渋谷店", "店名が正しくありません"
-        # カンマ含む店名が正しくエスケープされているか
-        assert rows[2][1] == "GO タクシー, 東京", "カンマ含む値のエスケープが正しくありません"
-        ok(f"ヘッダー・データ行・カンマエスケープの検証 OK ({len(rows)-1}件)")
+        rows = list(csv.reader(raw_bytes[3:].decode("utf-8").splitlines()))
+        assert rows[0] == headers,                       "ヘッダーが正しくありません"
+        assert len(rows) == 3,                           f"行数が不正: {len(rows)}"
+        assert rows[1][1] == "スターバックス渋谷店",     "店名が正しくありません"
+        assert rows[2][1] == "GO タクシー, 東京",        "カンマ含む値のエスケープが正しくありません"
+
+        ok(f"UTF-8 BOM付き確認済み")
+        ok(f"ヘッダー・データ行・カンマエスケープ OK ({len(rows)-1}件)")
+    except AssertionError as e:
+        fail(str(e))
+        return False, filename
     except Exception as e:
         fail(f"CSV検証に失敗: {e}")
-        return False
+        return False, filename
 
-    # BOM確認
-    with open(filename, "rb") as f:
-        bom = f.read(3)
-    if bom == b"\xef\xbb\xbf":
-        ok("UTF-8 BOM付き確認済み（Excelで文字化けなし）")
-    else:
-        fail("BOMが付いていません")
-        return False
-
-    return True
+    return True, filename
 
 
 # ─────────────────────────────────────────────
 # Step 4: 後片付け
 # ─────────────────────────────────────────────
 
-def cleanup():
+def cleanup(csv_file):
     section("4/4", "後片付け（テストCSV削除）")
-    if TEST_CSV_NAME and Path(TEST_CSV_NAME).exists():
-        Path(TEST_CSV_NAME).unlink()
-        ok(f"テストCSVを削除しました: {TEST_CSV_NAME}")
+    if csv_file and csv_file.exists():
+        csv_file.unlink()
+        ok(f"テストCSVを削除: {csv_file}")
     else:
         warn("削除対象のファイルが見つかりませんでした。")
     return True
@@ -251,7 +222,8 @@ def main():
     print("  Receipt Hub 総合テスト")
     print(f"{'═' * 50}{RESET}")
 
-    results = []
+    results   = []
+    csv_file  = None
 
     env_ok = check_environment()
     results.append(("環境チェック", env_ok))
@@ -262,10 +234,10 @@ def main():
     parse_ok = check_parsing()
     results.append(("解析テスト", parse_ok))
 
-    csv_ok = check_csv_export()
+    csv_ok, csv_file = check_csv_export()
     results.append(("CSV出力", csv_ok))
 
-    cleanup_ok = cleanup()
+    cleanup_ok = cleanup(csv_file)
     results.append(("後片付け", cleanup_ok))
 
     print(f"\n{BOLD}{'─' * 50}")
@@ -277,7 +249,6 @@ def main():
         print(f"  {name:<20} {status}")
         if not result:
             all_passed = False
-
     print(f"{BOLD}{'═' * 50}{RESET}\n")
 
     if all_passed:

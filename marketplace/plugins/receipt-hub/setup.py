@@ -30,7 +30,7 @@ def main():
     print("  Receipt Hub セットアップ")
     print(f"{'═' * 50}{RESET}")
 
-    # ── Step 1: exports/ ディレクトリ ────────────
+    # ── Step 1: exports/ ──────────────────────────
     section("Step 1: exports/ ディレクトリを作成")
     exports_dir = Path("exports").resolve()
     exports_dir.mkdir(exist_ok=True)
@@ -45,21 +45,34 @@ def main():
 
     # ── Step 3: config.json ──────────────────────
     section("Step 3: config.json を保存")
-    config_path = Path.home() / ".receipt-hub" / "config.json"
+    receipt_hub_dir = Path.home() / ".receipt-hub"
+    receipt_hub_dir.mkdir(parents=True, exist_ok=True)
+
+    config_path = receipt_hub_dir / "config.json"
     config = {
         "local_folder": str(Path.home() / "Documents" / "領収書" / "未処理"),
         "exports_dir": "exports",
     }
-    config_path.parent.mkdir(parents=True, exist_ok=True)
     with open(config_path, "w") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
     ok(f"保存しました: {config_path}")
+
+    # ── Step 4: vendor_history.json ──────────────
+    section("Step 4: vendor_history.json を初期化")
+    history_path = receipt_hub_dir / "vendor_history.json"
+    if not history_path.exists():
+        history_path.write_text("{}\n", encoding="utf-8")
+        ok(f"作成しました: {history_path}")
+    else:
+        ok(f"既存ファイルを保持: {history_path}")
 
     # ── 完了 ────────────────────────────────────
     print(f"\n{BOLD}{'═' * 50}{RESET}")
     print(f"{GREEN}{BOLD}✓ セットアップ完了！{RESET}")
     print("\n  動作確認テストを実行してください：")
     print("  python3 tests/integration_test.py\n")
+    print("  vendor履歴の確認:")
+    print(f"  cat ~/.receipt-hub/vendor_history.json\n")
 
 
 if __name__ == "__main__":

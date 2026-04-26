@@ -125,7 +125,8 @@ gemini     ✓ Connected   ← 画像・PDF解析に必要
 
 ### Step 3: Google Sheets OAuth認証
 
-サービスアカウント不要。自分のGoogleアカウントでブラウザ認証するだけです。**初回のみブラウザが開きます。2回目以降は完全自動です。**
+サービスアカウント不要。**Google Drive MCP の認証情報をそのまま再利用できます。**
+初回のみブラウザが開きます。2回目以降は完全自動です。
 
 #### 3-1. gspread をインストール
 
@@ -133,26 +134,20 @@ gemini     ✓ Connected   ← 画像・PDF解析に必要
 pip3 install gspread
 ```
 
-#### 3-2. Google Cloud で OAuth 認証情報を作成
+#### 3-2. 認証情報を配置
 
-1. [Google Cloud Console](https://console.cloud.google.com/) を開く
-2. 新規プロジェクトを作成（例: `receipt-hub`）
-3. 左メニュー「APIとサービス」→「ライブラリ」で以下を有効化：
-   - `Google Sheets API`
-   - `Google Drive API`
-4. 「APIとサービス」→「認証情報」→「認証情報を作成」→「OAuthクライアントID」
-5. アプリの種類: **「デスクトップアプリ」** を選択
-6. 名前は任意（例: `receipt-hub`）→「作成」
-7. 「JSONをダウンロード」をクリック
-
-#### 3-3. 認証情報ファイルを配置
+Claude Code の Google Drive MCP がすでに接続済みであれば、その認証情報をコピーするだけです。
 
 ```bash
 mkdir -p ~/.config/gspread
-mv ~/Downloads/client_secret_*.json ~/.config/gspread/credentials.json
+cp ~/.config/gdrive-mcp/credentials.json ~/.config/gspread/credentials.json
 ```
 
-#### 3-4. 初回ブラウザ認証（1回だけ）
+> `~/.config/gdrive-mcp/credentials.json` が見つからない場合は、
+> Google Drive MCP の設定ファイル内の `credentials.json` を探してコピーしてください。
+> それでも見つからない場合は [トラブルシューティング](#google-drive-mcpの認証情報が見つからない) を参照してください。
+
+#### 3-3. 初回ブラウザ認証（1回だけ）
 
 ```bash
 python3 -c "
@@ -164,7 +159,7 @@ print('✓ 認証成功！')
 
 ブラウザが自動で開くので：
 1. Googleアカウントを選択
-2. 「このアプリがGoogleドライブとスプレッドシートにアクセスすることを許可しますか？」→「許可」
+2. 「許可」をクリック
 3. ターミナルに「✓ 認証成功！」と表示されたら完了
 
 > 認証トークンは `~/.config/gspread/authorized_user.json` に保存されます。
@@ -419,6 +414,16 @@ claude plugin update receipt-hub
 rm ~/.config/gspread/authorized_user.json
 python3 -c "import gspread; gspread.oauth()"
 ```
+
+### Google Drive MCPの認証情報が見つからない
+
+`~/.config/gdrive-mcp/credentials.json` が存在しない場合は、Google Cloud Console から手動で作成してください。
+
+1. [console.cloud.google.com](https://console.cloud.google.com/) を開く
+2. 「APIとサービス」→「ライブラリ」で **Google Sheets API** と **Google Drive API** を有効化
+3. 「認証情報」→「OAuthクライアントID」→ アプリの種類: **デスクトップアプリ** で作成
+4. JSONをダウンロード → `~/.config/gspread/credentials.json` に保存
+5. `python3 -c "import gspread; gspread.oauth()"` を実行してブラウザ認証
 
 ### スプレッドシートに書き込めない
 

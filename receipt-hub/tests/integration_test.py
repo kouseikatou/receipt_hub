@@ -157,7 +157,7 @@ def check_csv_export():
     EXPORTS_DIR.mkdir(exist_ok=True)
     filename = EXPORTS_DIR / f"{datetime.now().strftime('%Y%m%d')}_テスト.csv"
     headers  = ["日付", "店名・先方", "金額(税込)", "税抜金額", "消費税率",
-                "勘定科目", "種別", "メモ", "ソース"]
+                "勘定科目", "種別", "メモ", "ソース", "確信度"]
 
     try:
         with open(filename, "w", newline="", encoding="utf-8-sig") as f:
@@ -167,7 +167,7 @@ def check_csv_export():
                 writer.writerow([
                     item["date"], item["vendor"], item["amount"], item["amount_excl_tax"],
                     f"{item['tax_rate']}%", item["category"], item["doc_type"],
-                    item["memo"], item["source"],
+                    item["memo"], item["source"], item.get("confidence", "high"),
                 ])
         ok(f"CSVファイルを生成: {filename}")
     except Exception as e:

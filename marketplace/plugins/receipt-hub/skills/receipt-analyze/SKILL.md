@@ -82,6 +82,12 @@ python3 scripts/history.py list
 python3 scripts/history.py stats
 ```
 
+## ファイルの保存
+
+- **ローカルファイル**: 元のパスをそのまま `file_path` に記録する
+- **Gmail 添付 / Chatwork ファイル**: `~/Documents/領収書/処理済/` にダウンロード保存し、そのパスを `file_path` に記録する
+- **会話に貼り付けられた PDF**: 一時パスをそのまま `file_path` に記録する
+
 ## 出力形式
 
 ```json
@@ -96,6 +102,7 @@ python3 scripts/history.py stats
   "memo": "打ち合わせ代",
   "confidence": "high",
   "source": "Gmail",
+  "file_path": "/Users/xxx/Documents/領収書/処理済/invoice_20260315.pdf",
   "raw_source_id": "thread_xxx"
 }
 ```

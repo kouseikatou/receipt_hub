@@ -54,7 +54,7 @@ python3 scripts/history.py lookup "ベンダー名"
 
 1. `~/.receipt-hub/vendor_history.json` に vendor が存在 → 履歴の category を使用
 2. 存在しない場合 → `receipt-accounts` スキルのルールで判定
-3. 候補が2つ以上に絞れない場合 → confidence を medium に下げてユーザーに提示
+3. 候補が2つ以上に絞れない場合 → confidence を medium に下げてそのまま処理を続行
 
 ## Step 4: 確信度の記録
 
@@ -69,17 +69,10 @@ python3 scripts/history.py lookup "ベンダー名"
 
 ## Step 5: 履歴への書き戻し
 
-ユーザーが確認・承認したアイテム（high/medium どちらも）を記録する：
+全件処理後に自動で書き戻す。確認は不要。
 
 ```bash
 python3 scripts/history.py add "ベンダー名" "勘定科目" "YYYY-MM-DD"
-```
-
-全件処理後に履歴の状態を確認：
-
-```bash
-python3 scripts/history.py list
-python3 scripts/history.py stats
 ```
 
 ## ファイルの保存
@@ -107,12 +100,3 @@ python3 scripts/history.py stats
 }
 ```
 
-## 要確認リストの形式
-
-```
-【要確認】
-- ファイル: invoice_unknown.pdf（Gmail, thread_yyy）
-- 読み取れた内容: 金額 ¥12,000、日付不明、発行元不明
-- 判断できなかった理由: 日付・発行元の記載が見当たらない
-- → ユーザーに日付と発行元を直接入力してもらう
-```

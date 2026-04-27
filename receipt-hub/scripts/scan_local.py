@@ -20,7 +20,14 @@ from datetime import datetime, date
 from pathlib import Path
 
 EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".heic"}
-MDFIND_DIRS = [Path.home() / "Downloads", Path.home() / "Desktop"]
+
+# mdfind でホーム全体を検索（Spotlight インデックス使用）
+MDFIND_ROOT = Path.home()
+
+# find でも補完するフォルダ（mdfind が拾えないケース向け）
+FIND_FALLBACK_DIRS = [
+    Path.home() / "Documents" / "領収書" / "未処理",
+]
 
 
 def _is_target(path: str) -> bool:
@@ -87,18 +94,15 @@ def scan(start: date, end: date, extra_dirs: list[Path]) -> dict:
     all_items = []
     report = []
 
-    # mdfind 対象フォルダ（Downloads / Desktop）
-    for folder in MDFIND_DIRS:
-        if not folder.exists():
-            continue
-        items = scan_mdfind(folder, start, end)
-        new = [i for i in items if i["path"] not in seen]
-        seen.update(i["path"] for i in new)
-        all_items.extend(new)
-        report.append(f"  {folder} ({len(new)}件) ← mdfind/ダウンロード日")
+    # mdfind でホーム全体をダウンロード日で検索
+    items = scan_mdfind(MDFIND_ROOT, start, end)
+    new = [i for i in items if i["path"] not in seen]
+    seen.update(i["path"] for i in new)
+    all_items.extend(new)
+    report.append(f"  ~/ 全体 ({len(new)}件) ← mdfind/ダウンロード日")
 
-    # find 対象フォルダ（それ以外 + ユーザー指定）
-    find_dirs = [d for d in extra_dirs if d not in MDFIND_DIRS]
+    # find で補完（mdfind が拾えないファイル向け）
+    find_dirs = extra_dirs if extra_dirs else FIND_FALLBACK_DIRS
     for folder in find_dirs:
         if not folder.exists():
             report.append(f"  {folder} — フォルダが見つかりません")
@@ -107,7 +111,7 @@ def scan(start: date, end: date, extra_dirs: list[Path]) -> dict:
         new = [i for i in items if i["path"] not in seen]
         seen.update(i["path"] for i in new)
         all_items.extend(new)
-        report.append(f"  {folder} ({len(new)}件) ← find/更新日")
+        report.append(f"  {folder} ({len(new)}件) ← find/更新日（補完）")
 
     return {
         "items": all_items,

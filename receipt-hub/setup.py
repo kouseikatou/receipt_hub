@@ -32,8 +32,8 @@ def main():
 
     # ── Step 1: exports/ ──────────────────────────
     section("Step 1: exports/ ディレクトリを作成")
-    exports_dir = Path("exports").resolve()
-    exports_dir.mkdir(exist_ok=True)
+    exports_dir = Path.home() / "Documents" / "領収書" / "exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
     ok(f"{exports_dir}/")
 
     # ── Step 2: ローカルフォルダ ─────────────────
@@ -51,7 +51,7 @@ def main():
     config_path = receipt_hub_dir / "config.json"
     config = {
         "local_folder": str(Path.home() / "Documents" / "領収書" / "未処理"),
-        "exports_dir": "exports",
+        "exports_dir": str(exports_dir),
     }
     with open(config_path, "w") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)

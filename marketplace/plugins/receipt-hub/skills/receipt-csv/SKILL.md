@@ -39,8 +39,10 @@ from datetime import datetime
 from pathlib import Path
 
 items = json.loads(sys.stdin.read())
-Path("exports").mkdir(exist_ok=True)
-filename = f"exports/{datetime.now().strftime('%Y%m%d')}_経費.csv"
+config = json.loads((Path.home() / ".receipt-hub" / "config.json").read_text())
+exports_dir = Path(config.get("exports_dir", str(Path.home() / "Documents" / "領収書" / "exports")))
+exports_dir.mkdir(parents=True, exist_ok=True)
+filename = exports_dir / f"{datetime.now().strftime('%Y%m%d')}_経費.csv"
 headers = ["日付", "店名・先方", "金額(税込)", "税抜金額", "消費税率",
            "勘定科目", "種別", "メモ", "ソース"]
 

@@ -10,31 +10,33 @@ tools:
 
 ## Step 1: 重複除去
 
-CSV 出力の前に必ず重複チェックを実行する。
+解析済みアイテムを `/tmp/receipt_items.json` に書き出してから重複除去を実行する。
 
 ```bash
-# 解析済みアイテムを items.json として保存してから実行
-python3 scripts/dedup.py items.json
+# items は解析結果のJSON配列。/tmp に書き出す
+python3 scripts/dedup.py /tmp/receipt_items.json > /tmp/receipt_deduped.json
 ```
 
 重複を自動除去してそのまま次へ進む。除去した件数は最後の完了報告にまとめる。
 
 ## Step 2: CSV 出力
 
-重複除去後の `items` を使って出力する：
+重複除去後のファイルをスクリプトに渡して出力する：
 
 ```bash
-python3 - <<'PYEOF'
+python3 - /tmp/receipt_deduped.json <<'PYEOF'
 import csv, json, sys
 from datetime import datetime
 from pathlib import Path
 
-items = json.loads(sys.stdin.read())
+# dedup.py の出力は {"items": [...], ...} 形式
+raw = json.loads(open(sys.argv[1], encoding="utf-8").read())
+items = raw.get("items", raw) if isinstance(raw, dict) else raw
+
 config = json.loads((Path.home() / ".receipt-hub" / "config.json").read_text())
-exports_dir = Path(config.get("exports_dir", str(Path.home() / "Documents" / "領収書" / "exports")))
+exports_dir = Path(config.get("exports_dir", str(Path.home() / "Desktop" / "領収書" / "exports")))
 exports_dir.mkdir(parents=True, exist_ok=True)
 
-# 月次ファイルに追記（なければ新規作成）
 filename = exports_dir / f"{datetime.now().strftime('%Y%m')}_経費.csv"
 headers = ["日付", "店名・先方", "金額(税込)", "税抜金額", "消費税率",
            "勘定科目", "種別", "メモ", "ソース", "確信度", "元ファイル"]
@@ -66,7 +68,7 @@ PYEOF
 
 | 項目 | 内容 |
 |------|------|
-| 保存先 | `~/Documents/領収書/exports/` |
+| 保存先 | `~/Desktop/領収書/exports/` |
 | ファイル名 | `YYYYMM_経費.csv`（月次・追記）|
 | 文字コード | UTF-8 BOM付き（Excel・Sheets で文字化けなし）|
 | ヘッダー | `日付,店名・先方,金額(税込),税抜金額,消費税率,勘定科目,種別,メモ,ソース,確信度,元ファイル` |

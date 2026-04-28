@@ -40,11 +40,11 @@ def check_environment():
     EXPORTS_DIR.mkdir(exist_ok=True)
     ok(f"exports/ ディレクトリ確認済み")
 
-    local_dir = Path.home() / "Documents" / "領収書" / "未処理"
-    if local_dir.exists():
-        ok("ローカルフォルダ確認済み: ~/Documents/領収書/未処理/")
+    exports_abs = Path.home() / "Desktop" / "領収書" / "exports"
+    if exports_abs.exists():
+        ok(f"出力先フォルダ確認済み: ~/Desktop/領収書/exports/")
     else:
-        warn("ローカルフォルダが見つかりません。`python3 setup.py` を実行してください。")
+        warn("出力先フォルダが見つかりません。`python3 setup.py` を実行してください。")
 
     major, minor = sys.version_info[:2]
     if major >= 3 and minor >= 8:

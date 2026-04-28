@@ -5,6 +5,8 @@ description: |
 tools:
   - Read
   - Bash
+  - mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__download_file_content
+  - mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__read_file_content
   - mcp__gemini__analyze_media
 ---
 
@@ -24,6 +26,18 @@ python3 scripts/history.py lookup "ベンダー名"
 
 返り値の `confidence=high`（count >= 3）なら勘定科目をそのまま採用し Step 2〜3 をスキップ。
 `found=false` または `confidence=medium` なら Step 2 へ進む。
+
+## Step 1.5: Gmail添付の場合 — Drive からダウンロード
+
+アイテムの `source` が `"Gmail"` かつ `path` が null の場合、Google Drive MCP でファイルを取得してから Gemini に渡す。
+
+```
+mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__download_file_content
+  file_id: <収集フェーズで取得した Drive file_id>
+```
+
+ダウンロードしたバイナリを `~/Desktop/領収書/<ファイル名>` に保存し、その絶対パスを `file_path` に記録する。
+Drive からも取得できない場合はメール本文テキストを Gemini に渡す。
 
 ## Step 2: Gemini Vision で解析
 
@@ -78,7 +92,7 @@ python3 scripts/history.py add "ベンダー名" "勘定科目" "YYYY-MM-DD"
 ## ファイルの保存
 
 - **ローカルファイル**: 元のパスをそのまま `file_path` に記録する
-- **Gmail 添付 / Chatwork ファイル**: `~/Documents/領収書/処理済/` にダウンロード保存し、そのパスを `file_path` に記録する
+- **Gmail 添付 / Chatwork ファイル**: `~/Desktop/領収書/` にダウンロード保存し、そのパスを `file_path` に記録する
 - **会話に貼り付けられた PDF**: 一時パスをそのまま `file_path` に記録する
 
 ## 出力形式
@@ -95,7 +109,7 @@ python3 scripts/history.py add "ベンダー名" "勘定科目" "YYYY-MM-DD"
   "memo": "打ち合わせ代",
   "confidence": "high",
   "source": "Gmail",
-  "file_path": "/Users/xxx/Documents/領収書/処理済/invoice_20260315.pdf",
+  "file_path": "/Users/xxx/Desktop/領収書/invoice_20260315.pdf",
   "raw_source_id": "thread_xxx"
 }
 ```

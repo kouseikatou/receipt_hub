@@ -8,6 +8,9 @@ tools:
   - mcp__d8d4c261-d776-4785-b50d-82ee22bc31bf__search_threads
   - mcp__d8d4c261-d776-4785-b50d-82ee22bc31bf__get_thread
   - mcp__d8d4c261-d776-4785-b50d-82ee22bc31bf__list_labels
+  - mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__search_files
+  - mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__download_file_content
+  - mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__read_file_content
   - mcp__chatwork__list_rooms
   - mcp__chatwork__list_room_messages
   - mcp__chatwork__list_room_files
@@ -28,6 +31,7 @@ tools:
 ### Gmail
 - 検索クエリで期間・キーワードを絞り込む（詳細は references 参照）
 - ラベル「receipt-hub/処理済」がついているものはスキップ
+- 添付ファイルは Google Drive MCP でダウンロードする（詳細は references 参照）
 
 ### Chatwork
 Chatworkの日付フィルタリングは **ファイルの投稿日時（APIの `created_at` フィールド）** を使う。

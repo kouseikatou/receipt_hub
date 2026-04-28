@@ -11,6 +11,7 @@ vendor_history ヘルパー
 
 import json
 import sys
+from collections import Counter
 from datetime import date
 from pathlib import Path
 
@@ -77,12 +78,10 @@ def cmd_stats() -> None:
         return
     total = len(history)
     high = sum(1 for e in history.values() if e["count"] >= HIGH_CONFIDENCE_THRESHOLD)
-    by_category: dict[str, int] = {}
-    for entry in history.values():
-        by_category[entry["category"]] = by_category.get(entry["category"], 0) + 1
+    by_category = Counter(e["category"] for e in history.values())
     print(f"登録ベンダー数: {total}  うち高確信度(★): {high}")
     print("\n勘定科目別ベンダー数:")
-    for cat, cnt in sorted(by_category.items(), key=lambda x: -x[1]):
+    for cat, cnt in by_category.most_common():
         print(f"  {cat:<16} {cnt} 件")
 
 

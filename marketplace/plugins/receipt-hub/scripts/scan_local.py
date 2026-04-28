@@ -24,14 +24,16 @@ EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".heic"}
 # mdfind でホーム全体を検索（Spotlight インデックス使用）
 MDFIND_ROOT = Path.home()
 
-# find でも補完するフォルダ（mdfind が拾えないケース向け）
-FIND_FALLBACK_DIRS = [
-    Path.home() / "Documents" / "領収書" / "未処理",
-]
+# find でも補完するフォルダ（ユーザーが --dirs で明示指定した場合のみ使用）
+FIND_FALLBACK_DIRS = []
 
 
 def _is_target(path: str) -> bool:
     return Path(path).suffix.lower() in EXTENSIONS
+
+
+def _mtime_str(path: str) -> str:
+    return datetime.fromtimestamp(Path(path).stat().st_mtime).strftime("%Y-%m-%d %H:%M")
 
 
 def scan_mdfind(folder: Path, start: date, end: date) -> list[dict]:
@@ -47,23 +49,16 @@ def scan_mdfind(folder: Path, start: date, end: date) -> list[dict]:
             ["mdfind", "-onlyin", str(folder), query],
             capture_output=True, text=True, timeout=15
         )
-        paths = [p for p in result.stdout.splitlines() if _is_target(p)]
-        items = []
-        for p in paths:
-            mtime = datetime.fromtimestamp(Path(p).stat().st_mtime).strftime("%Y-%m-%d %H:%M")
-            items.append({"path": p, "method": "mdfind(ダウンロード日)", "mtime": mtime})
-        return items
+        return [
+            {"path": p, "method": "mdfind(ダウンロード日)", "mtime": _mtime_str(p)}
+            for p in result.stdout.splitlines() if _is_target(p)
+        ]
     except Exception:
         return []
 
 
 def scan_find(folder: Path, start: date, end: date) -> list[dict]:
     """find で更新日基準の検索。"""
-    # end の翌日を「以前」として指定
-    end_str = end.strftime("%Y-%m-%d 23:59:59")
-    start_str = (start.replace(day=start.day - 1) if start.day > 1
-                 else start).strftime("%Y-%m-%d 23:59:59")
-
     ext_args = []
     for i, ext in enumerate(EXTENSIONS):
         if i > 0:
@@ -78,13 +73,10 @@ def scan_find(folder: Path, start: date, end: date) -> list[dict]:
              "!", "-newermt", f"{end.isoformat()} 23:59:59"],
             capture_output=True, text=True, timeout=30
         )
-        items = []
-        for p in result.stdout.splitlines():
-            if not p:
-                continue
-            mtime = datetime.fromtimestamp(Path(p).stat().st_mtime).strftime("%Y-%m-%d %H:%M")
-            items.append({"path": p, "method": "find(更新日)", "mtime": mtime})
-        return items
+        return [
+            {"path": p, "method": "find(更新日)", "mtime": _mtime_str(p)}
+            for p in result.stdout.splitlines() if p
+        ]
     except Exception:
         return []
 
@@ -133,8 +125,7 @@ def main():
     start = date.fromisoformat(args.start)
     end   = date.fromisoformat(args.end)
 
-    default_extra = [Path.home() / "Documents" / "領収書" / "未処理"]
-    extra_dirs = [Path(d).expanduser() for d in args.dirs] if args.dirs else default_extra
+    extra_dirs = [Path(d).expanduser() for d in args.dirs] if args.dirs else FIND_FALLBACK_DIRS
 
     result = scan(start, end, extra_dirs)
 

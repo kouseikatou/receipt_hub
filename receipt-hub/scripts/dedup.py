@@ -79,12 +79,7 @@ def detect(items: list[dict]) -> dict:
                 removed_indices.add(j)
                 duplicates.append({
                     "removed": item_j,
-                    "kept": {
-                        "vendor": item_i.get("vendor"),
-                        "date": item_i.get("date"),
-                        "amount": item_i.get("amount"),
-                        "source": item_i.get("source"),
-                    },
+                    "kept": {k: item_i.get(k) for k in ("vendor", "date", "amount", "source")},
                     "matched_criteria": reasons,
                     "reason": f"{' / '.join(reasons)} が一致",
                 })

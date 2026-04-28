@@ -7,6 +7,9 @@ tools:
   - Bash
   - mcp__d8d4c261-d776-4785-b50d-82ee22bc31bf__search_threads
   - mcp__d8d4c261-d776-4785-b50d-82ee22bc31bf__get_thread
+  - mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__search_files
+  - mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__download_file_content
+  - mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__read_file_content
   - mcp__chatwork__list_rooms
   - mcp__chatwork__list_room_messages
   - mcp__chatwork__get_room_message
@@ -59,7 +62,7 @@ python3 scripts/dedup.py items.json
 ✓ 完了
   収集: N 件（Gmail N / Chatwork N / ローカル N）
   重複除外: N 件
-  CSV出力: ~/Documents/領収書/exports/YYYYMMDD_経費.csv
+  CSV出力: ~/Desktop/領収書/exports/YYYYMM_経費.csv
   　領収書 N 件 / 請求書 N 件 / 合計 ¥XXX,XXX
 
 ⚠ 要確認（confidence=low）: N 件

@@ -19,32 +19,34 @@
 - `金額[　 ]*¥?[0-9,]+`
 - `total.*\$?[0-9,]+`
 
-### Gmail 添付PDFのダウンロード手順
+### Gmail 添付ファイルの取得手順
 
-Gmail スレッドから添付ファイルのファイル名を取得したあと、Google Drive MCP でファイルを取得する。
+Gmail添付は **Drive には保存されていない** のが大半なので、Drive 検索ではなく `get_thread` のレスポンスに含まれる base64 データを直接デコードして保存する。
 
-**Step 1: ファイル名で Drive を検索**
+**Step 1: スレッドを取得**
 ```
-mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__search_files
-  query: "ファイル名（拡張子含む）"
+mcp__d8d4c261-d776-4785-b50d-82ee22bc31bf__get_thread
+  thread_id: <候補メールの thread_id>
 ```
 
-**Step 2: ファイル内容をダウンロード**
-```
-mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__download_file_content
-  file_id: <Step1 で取得した id>
-```
-バイナリを `~/Desktop/領収書/<ファイル名>` にそのまま保存する。
+**Step 2: 添付パートを抽出してデコード**
 
-**Step 3: テキストが必要な場合**（PDF以外など）
-```
-mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__read_file_content
-  file_id: <id>
+`messages[].payload.parts[]` を再帰的に走査し、`filename` が空でないパートの `body.data`（base64url）を取り出してデコードし、`~/Desktop/領収書/<ファイル名>` に保存する。
+
+```bash
+python3 - <<'PY'
+import base64, pathlib
+data = "<body.data>"
+out = pathlib.Path("~/Desktop/領収書/<filename>").expanduser()
+out.parent.mkdir(parents=True, exist_ok=True)
+out.write_bytes(base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)))
+PY
 ```
 
 **保存後の扱い**
-- 保存した絶対パスを収集アイテムの `path` フィールドに記録し、解析フェーズへ渡す
-- ダウンロードできなかった場合はスキップせず、`path: null` のまま Gemini にメール本文を渡して解析する
+- 収集フェーズでは `thread_id` を `id` に詰めて渡し、ファイル取得は解析フェーズの Step 1.5 で行う
+- 解析フェーズで保存した絶対パスを `file_path` に記録する
+- 添付パートが見つからない／デコードに失敗したときだけ、メール本文を Gemini に渡してフォールバック解析する
 
 ### 重複回避
 処理済みのメールには Gmail ラベル「receipt-hub/処理済」を付与する。

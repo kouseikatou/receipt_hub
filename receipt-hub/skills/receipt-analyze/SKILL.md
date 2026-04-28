@@ -28,17 +28,30 @@ python3 scripts/history.py lookup "ベンダー名"
 返り値の `confidence=high`（count >= 3）なら勘定科目をそのまま採用し Step 2〜3 をスキップ。
 `found=false` または `confidence=medium` なら Step 2 へ進む。
 
-## Step 1.5: Gmail添付の場合 — Drive からダウンロード
+## Step 1.5: Gmail添付の場合 — get_thread で base64 を取得
 
-アイテムの `source` が `"Gmail"` かつ `path` が null の場合、Google Drive MCP でファイルを取得してから Gemini に渡す。
+アイテムの `source` が `"Gmail"` かつ `path` が null の場合、Gmail MCP の `get_thread` でスレッドを取得し、添付パートの base64 データを直接デコードして保存する。
+**Drive 経由では取得しない**：Gmail添付の大半は Drive に保存されていないため、Drive 検索だと詰まって本文テキスト解析に落ちる（trip.com 1月分のPDFはこれで解析失敗していた）。
 
 ```
-mcp__3b9ebbba-ec12-4a0a-a674-2ea89b789075__download_file_content
-  file_id: <収集フェーズで取得した Drive file_id>
+mcp__d8d4c261-d776-4785-b50d-82ee22bc31bf__get_thread
+  thread_id: <収集フェーズで取得した Gmail thread_id>
 ```
 
-ダウンロードしたバイナリを `~/Desktop/領収書/<ファイル名>` に保存し、その絶対パスを `file_path` に記録する。
-Drive からも取得できない場合はメール本文テキストを Gemini に渡す。
+レスポンスの `messages[].payload.parts[]` を再帰的に走査し、`filename` が空でないパートの `body.data`（base64url）を取り出してデコードし、`~/Desktop/領収書/<ファイル名>` に保存する。
+
+```bash
+python3 - <<'PY'
+import base64, pathlib
+data = "<body.data>"  # get_thread から取得した base64url 文字列
+out = pathlib.Path("~/Desktop/領収書/<filename>").expanduser()
+out.parent.mkdir(parents=True, exist_ok=True)
+out.write_bytes(base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)))
+PY
+```
+
+保存した絶対パスを `file_path` に記録し、Gemini に渡す。
+添付パートが見つからない／デコードに失敗した場合のみ、メール本文テキストを Gemini に渡す。
 
 ## Step 2: Gemini Vision で解析
 

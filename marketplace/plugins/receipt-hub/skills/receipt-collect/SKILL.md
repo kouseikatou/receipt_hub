@@ -31,7 +31,7 @@ tools:
 ### Gmail
 - 検索クエリで期間・キーワードを絞り込む（詳細は references 参照）
 - ラベル「receipt-hub/処理済」がついているものはスキップ
-- 添付ファイルは Google Drive MCP でダウンロードする（詳細は references 参照）
+- 候補スレッドは `thread_id` のまま渡す。添付の取得は解析フェーズで `get_thread` の base64 データから直接行う（Drive 経由はしない）
 
 ### Chatwork
 Chatworkの日付フィルタリングは **ファイルの投稿日時（APIの `created_at` フィールド）** を使う。

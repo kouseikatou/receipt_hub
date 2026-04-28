@@ -1,7 +1,7 @@
 {
   "name": "receipt-hub-local",
   "owner": {
-    "name": "katoukousei"
+    "name": "kouseikatou"
   },
   "metadata": {
     "description": "ローカル開発用マーケットプレイス"
@@ -10,10 +10,10 @@
     {
       "name": "receipt-hub",
       "source": "./plugins/receipt-hub",
-      "description": "Gmail・Chatwork・ローカルフォルダから領収書・請求書を自動収集し、AI解析でGoogleスプレッドシートに記録する経理自動化プラグイン",
+      "description": "Gmail・Chatwork・ローカルフォルダから領収書・請求書を自動収集し、AI解析で月次CSVに出力する経理自動化プラグイン",
       "version": "0.1.0",
       "author": {
-        "name": "katoukousei"
+        "name": "kouseikatou"
       },
       "category": "productivity",
       "tags": ["receipt", "invoice", "accounting", "expense", "japan"]

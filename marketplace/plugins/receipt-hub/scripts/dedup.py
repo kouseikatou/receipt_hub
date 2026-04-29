@@ -6,7 +6,9 @@
   python3 scripts/dedup.py items.json
   cat items.json | python3 scripts/dedup.py
 
-入力: 解析済みアイテムの JSON 配列（ファイルまたは stdin）
+入力: 解析済みアイテムの JSON（ファイルまたは stdin）
+  - 配列形式: [item1, item2, ...]
+  - dict 形式: {"items": [item1, item2, ...], ...}  # 自身の出力を再投入できる
 出力: stdout に JSON
   {
     "items":      [...],   # 重複除去後のアイテム
@@ -102,7 +104,15 @@ def main():
     else:
         raw = sys.stdin.read()
 
-    items = json.loads(raw)
+    parsed = json.loads(raw)
+    # 配列でも {"items": [...]} 形式でも受け付ける（自分自身の出力を再投入できるように）
+    if isinstance(parsed, dict) and "items" in parsed:
+        items = parsed["items"]
+    elif isinstance(parsed, list):
+        items = parsed
+    else:
+        sys.exit(f"入力フォーマットが不正です: 配列または {{\"items\": [...]}} を期待"
+                 f"（実際: {type(parsed).__name__}）")
     result = detect(items)
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
